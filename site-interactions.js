@@ -1,5 +1,5 @@
-(function() {
-    document.addEventListener('DOMContentLoaded', function() {
+(function () {
+  function initSiteInteractions() {
 
       /* TEXT REVEAL
          Section 3 and CTA are observed separately so delays do not leak
@@ -519,5 +519,11 @@
 
         initFooterLetters();
       })();
-    });
-  })();
+      }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSiteInteractions);
+  } else {
+    initSiteInteractions();
+  }
+})();
