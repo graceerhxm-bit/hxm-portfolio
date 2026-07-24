@@ -424,7 +424,7 @@
         });
       });
 
-      /* FOOTER LOGO LETTER DROP */
+      /* FOOTER REVEAL + LOGO LETTER ANIMATION */
       (function() {
         function clamp(value, min, max) {
           return Math.max(min, Math.min(max, value));
@@ -446,21 +446,49 @@
           }
         }
 
-        function initFooterLetters() {
-          var section11 = document.querySelector('.cta-section');
-
+        function initFooterReveal() {
+          var cta = document.querySelector('.cta-section');
+          var footerTrigger = document.querySelector('.footer-letter-trigger');
+          var footer = document.querySelector('.footer');
           var logo = document.querySelector('.footer-logo-svg');
           var copyWrap = document.querySelector('.footer-copy-wrap');
 
-          if (!section11 || !logo) {
-            console.warn('[Footer Letters] 找不到 .cta-section 或 .footer-logo-svg');
+          if (!cta || !footerTrigger || !logo) {
+            console.warn('[Footer Reveal] Missing .cta-section, .footer-letter-trigger, or .footer-logo-svg');
             return;
+          }
+
+          /* Restore the original reveal structure. */
+          cta.style.position = 'relative';
+          cta.style.zIndex = '2';
+
+          footerTrigger.style.position = 'sticky';
+          footerTrigger.style.bottom = '0';
+          footerTrigger.style.width = '100%';
+          footerTrigger.style.height = '100vh';
+          footerTrigger.style.minHeight = '100vh';
+          footerTrigger.style.overflow = 'hidden';
+          footerTrigger.style.zIndex = '1';
+
+          if (footer) {
+            footer.style.position = 'relative';
+            footer.style.width = '100%';
+            footer.style.height = '100%';
           }
 
           var letters = logo.querySelectorAll('.footer-logo-letter');
 
+          /* Fallback for SVGs whose letter groups lost the class. */
           if (!letters.length) {
-            console.warn('[Footer Letters] 找不到 footer-logo-letter');
+            var fallbackLetters = logo.querySelectorAll(':scope > g, :scope > path');
+            fallbackLetters.forEach(function(letter) {
+              letter.classList.add('footer-logo-letter');
+            });
+            letters = logo.querySelectorAll('.footer-logo-letter');
+          }
+
+          if (!letters.length) {
+            console.warn('[Footer Reveal] No SVG letter groups or paths found');
             return;
           }
 
@@ -469,7 +497,7 @@
             letter.style.transformOrigin = 'center bottom';
             letter.style.willChange = 'transform, fill';
             letter.style.transition = 'none';
-            letter.style.transform = 'translate3d(0,-180px,0)';
+            letter.style.transform = 'translate3d(0,220px,0)';
             setLetterColor(letter, 0);
           });
 
@@ -480,21 +508,26 @@
             copyWrap.style.opacity = '0.25';
           }
 
+          var ticking = false;
+
           function update() {
-            var rect = section11.getBoundingClientRect();
-            var vh = window.innerHeight;
-            var progress = clamp((vh - rect.bottom) / vh, 0, 1);
-            var moveDistance = Math.min(window.innerWidth * 0.12, 220);
-            var stagger = 0.42;
+            ticking = false;
+
+            var rect = footerTrigger.getBoundingClientRect();
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+
+            /* Progress begins when the footer enters from the bottom and ends
+               when its top reaches the top of the viewport. */
+            var progress = clamp((vh - rect.top) / vh, 0, 1);
+            var stagger = 0.38;
 
             if (copyWrap) {
-              var copyDelay = 0.18;
-              var copyProgress = clamp((progress - copyDelay) / 0.82, 0, 1);
+              var copyProgress = clamp((progress - 0.08) / 0.72, 0, 1);
               var copyEase = easeOutCubic(copyProgress);
-              var copyY = 120 - 180 * copyEase;
+              var copyY = 120 * (1 - copyEase);
 
               copyWrap.style.transform = 'translate3d(0,' + copyY + 'px,0)';
-              copyWrap.style.opacity = 0.25 + copyEase * 0.75;
+              copyWrap.style.opacity = String(0.25 + copyEase * 0.75);
             }
 
             letters.forEach(function(letter, index) {
@@ -502,9 +535,9 @@
                 ? (index / (letters.length - 1)) * stagger
                 : 0;
 
-              var p = clamp((progress - delay) / (1 - stagger), 0, 1);
-              var eased = easeOutCubic(p);
-              var y = moveDistance * (1 - eased);
+              var letterProgress = clamp((progress - delay) / (1 - stagger), 0, 1);
+              var eased = easeOutCubic(letterProgress);
+              var y = 220 * (1 - eased);
               var colorValue = Math.round(255 * eased);
 
               letter.style.transform = 'translate3d(0,' + y + 'px,0)';
@@ -512,12 +545,19 @@
             });
           }
 
+          function requestUpdate() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(update);
+          }
+
           update();
-          window.addEventListener('scroll', update, { passive: true });
-          window.addEventListener('resize', update);
+          window.addEventListener('scroll', requestUpdate, { passive: true });
+          window.addEventListener('resize', requestUpdate);
+          window.addEventListener('load', requestUpdate);
         }
 
-        initFooterLetters();
+        initFooterReveal();
       })();
       }
 
