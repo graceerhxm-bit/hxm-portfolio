@@ -449,16 +449,14 @@
         function initFooterReveal() {
           var cta = document.querySelector('.cta-section');
           var footerTrigger = document.querySelector('.footer-letter-trigger');
-          var footer = document.querySelector('.footer');
           var logo = document.querySelector('.footer-logo-svg');
           var copyWrap = document.querySelector('.footer-copy-wrap');
 
           if (!cta || !footerTrigger || !logo) {
-            console.warn('[Footer Reveal] Missing .cta-section, .footer-letter-trigger, or .footer-logo-svg');
+            console.warn('[Footer Reveal] Missing required footer elements');
             return;
           }
 
-          /* Restore the original reveal structure. */
           cta.style.position = 'relative';
           cta.style.zIndex = '2';
 
@@ -470,25 +468,10 @@
           footerTrigger.style.overflow = 'hidden';
           footerTrigger.style.zIndex = '1';
 
-          if (footer) {
-            footer.style.position = 'relative';
-            footer.style.width = '100%';
-            footer.style.height = '100%';
-          }
-
           var letters = logo.querySelectorAll('.footer-logo-letter');
 
-          /* Fallback for SVGs whose letter groups lost the class. */
           if (!letters.length) {
-            var fallbackLetters = logo.querySelectorAll(':scope > g, :scope > path');
-            fallbackLetters.forEach(function(letter) {
-              letter.classList.add('footer-logo-letter');
-            });
-            letters = logo.querySelectorAll('.footer-logo-letter');
-          }
-
-          if (!letters.length) {
-            console.warn('[Footer Reveal] No SVG letter groups or paths found');
+            console.warn('[Footer Reveal] No .footer-logo-letter elements found');
             return;
           }
 
@@ -497,15 +480,11 @@
             letter.style.transformOrigin = 'center bottom';
             letter.style.willChange = 'transform, fill';
             letter.style.transition = 'none';
-            letter.style.transform = 'translate3d(0,220px,0)';
-            setLetterColor(letter, 0);
           });
 
           if (copyWrap) {
             copyWrap.style.willChange = 'transform, opacity';
             copyWrap.style.transition = 'none';
-            copyWrap.style.transform = 'translate3d(0,120px,0)';
-            copyWrap.style.opacity = '0.25';
           }
 
           var ticking = false;
@@ -513,18 +492,20 @@
           function update() {
             ticking = false;
 
-            var rect = footerTrigger.getBoundingClientRect();
             var vh = window.innerHeight || document.documentElement.clientHeight;
+            var logoRect = logo.getBoundingClientRect();
 
-            /* Progress begins when the footer enters from the bottom and ends
-               when its top reaches the top of the viewport. */
-            var progress = clamp((vh - rect.top) / vh, 0, 1);
-            var stagger = 0.38;
+            /* Start when the logo enters from the bottom of the viewport. */
+            var start = vh;
+            var end = vh * 0.28;
+            var progress = clamp((start - logoRect.top) / (start - end), 0, 1);
+            var stagger = 0.42;
 
             if (copyWrap) {
-              var copyProgress = clamp((progress - 0.08) / 0.72, 0, 1);
+              var copyRect = copyWrap.getBoundingClientRect();
+              var copyProgress = clamp((vh - copyRect.top) / (vh * 0.62), 0, 1);
               var copyEase = easeOutCubic(copyProgress);
-              var copyY = 120 * (1 - copyEase);
+              var copyY = 80 * (1 - copyEase);
 
               copyWrap.style.transform = 'translate3d(0,' + copyY + 'px,0)';
               copyWrap.style.opacity = String(0.25 + copyEase * 0.75);
@@ -537,7 +518,7 @@
 
               var letterProgress = clamp((progress - delay) / (1 - stagger), 0, 1);
               var eased = easeOutCubic(letterProgress);
-              var y = 220 * (1 - eased);
+              var y = 180 * (1 - eased);
               var colorValue = Math.round(255 * eased);
 
               letter.style.transform = 'translate3d(0,' + y + 'px,0)';
