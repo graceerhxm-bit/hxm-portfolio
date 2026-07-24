@@ -458,27 +458,34 @@
             return;
           }
 
+          /* CTA stays above the footer while it leaves the viewport. */
           cta.style.position = 'relative';
           cta.style.zIndex = '3';
           cta.style.backgroundColor = '#0a0a12';
 
+          /* The trigger supplies exactly one viewport of scroll distance. */
           footerTrigger.style.position = 'relative';
           footerTrigger.style.width = '100%';
           footerTrigger.style.height = '100vh';
           footerTrigger.style.minHeight = '100vh';
-          footerTrigger.style.overflow = 'visible';
+          footerTrigger.style.overflow = 'clip';
           footerTrigger.style.zIndex = '1';
-          footerTrigger.style.background = 'transparent';
+          footerTrigger.style.backgroundColor = '#111117';
 
-          footer.style.position = 'fixed';
-          footer.style.left = '0';
-          footer.style.right = '0';
+          /* Keep the footer inside normal document flow to avoid a second scrollbar. */
+          footer.style.position = 'sticky';
+          footer.style.left = 'auto';
+          footer.style.right = 'auto';
+          footer.style.top = 'auto';
           footer.style.bottom = '0';
           footer.style.width = '100%';
           footer.style.height = '100vh';
+          footer.style.minHeight = '100vh';
+          footer.style.overflow = 'hidden';
           footer.style.zIndex = '1';
-          footer.style.pointerEvents = 'auto';
-          footer.style.willChange = 'transform, opacity';
+          footer.style.opacity = '1';
+          footer.style.visibility = 'visible';
+          footer.style.transform = 'none';
 
           var letters = logo.querySelectorAll('.footer-logo-letter');
 
@@ -505,19 +512,19 @@
             ticking = false;
 
             var vh = window.innerHeight || document.documentElement.clientHeight;
-            var triggerRect = footerTrigger.getBoundingClientRect();
+            var rect = footerTrigger.getBoundingClientRect();
 
-            /* The animation is driven by the footer spacer moving through the viewport.
-               Unlike the fixed footer and sticky logo, this rectangle keeps changing. */
-            var progress = clamp((vh - triggerRect.top) / vh, 0, 1);
-            var easedReveal = easeOutCubic(progress);
-
-            footer.style.opacity = String(progress);
-            footer.style.transform = 'translate3d(0,' + (70 * (1 - easedReveal)) + 'px,0)';
-            footer.style.visibility = progress <= 0.001 ? 'hidden' : 'visible';
+            /*
+              Animation range:
+              progress 0 when the footer section is just below the viewport;
+              progress 1 after it has travelled 70% of one viewport upward.
+            */
+            var start = vh;
+            var end = vh * 0.30;
+            var progress = clamp((start - rect.top) / (start - end), 0, 1);
 
             if (copyWrap) {
-              var copyProgress = clamp((progress - 0.08) / 0.72, 0, 1);
+              var copyProgress = clamp((progress - 0.04) / 0.68, 0, 1);
               var copyEase = easeOutCubic(copyProgress);
               var copyY = 90 * (1 - copyEase);
 
@@ -525,7 +532,7 @@
               copyWrap.style.opacity = String(0.2 + copyEase * 0.8);
             }
 
-            var stagger = 0.44;
+            var stagger = 0.36;
 
             letters.forEach(function(letter, index) {
               var delay = letters.length > 1
@@ -534,8 +541,8 @@
 
               var letterProgress = clamp((progress - delay) / (1 - stagger), 0, 1);
               var eased = easeOutCubic(letterProgress);
-              var y = 220 * (1 - eased);
-              var colorValue = Math.round(255 * eased);
+              var y = 180 * (1 - eased);
+              var colorValue = Math.round(55 + 200 * eased);
 
               letter.style.transform = 'translate3d(0,' + y + 'px,0)';
               setLetterColor(letter, colorValue);
