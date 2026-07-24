@@ -1,6 +1,26 @@
 (function () {
   function initSiteInteractions() {
 
+      /* LENIS SMOOTH SCROLL */
+      if (window.Lenis && !window.__siteLenis) {
+        var lenis = new Lenis({
+          duration: 1.2,
+          smoothWheel: true,
+          wheelMultiplier: 0.9,
+          touchMultiplier: 1,
+          infinite: false
+        });
+
+        window.__siteLenis = lenis;
+
+        function lenisRaf(time) {
+          lenis.raf(time);
+          requestAnimationFrame(lenisRaf);
+        }
+
+        requestAnimationFrame(lenisRaf);
+      }
+
       /* TEXT REVEAL
          Section 3 and CTA are observed separately so delays do not leak
          from one section into the other. */
