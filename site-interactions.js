@@ -449,24 +449,36 @@
         function initFooterReveal() {
           var cta = document.querySelector('.cta-section');
           var footerTrigger = document.querySelector('.footer-letter-trigger');
+          var footer = document.querySelector('.footer');
           var logo = document.querySelector('.footer-logo-svg');
           var copyWrap = document.querySelector('.footer-copy-wrap');
 
-          if (!cta || !footerTrigger || !logo) {
+          if (!cta || !footerTrigger || !footer || !logo) {
             console.warn('[Footer Reveal] Missing required footer elements');
             return;
           }
 
           cta.style.position = 'relative';
-          cta.style.zIndex = '2';
+          cta.style.zIndex = '3';
+          cta.style.backgroundColor = '#0a0a12';
 
-          footerTrigger.style.position = 'sticky';
-          footerTrigger.style.bottom = '0';
+          footerTrigger.style.position = 'relative';
           footerTrigger.style.width = '100%';
           footerTrigger.style.height = '100vh';
           footerTrigger.style.minHeight = '100vh';
-          footerTrigger.style.overflow = 'hidden';
+          footerTrigger.style.overflow = 'visible';
           footerTrigger.style.zIndex = '1';
+          footerTrigger.style.background = 'transparent';
+
+          footer.style.position = 'fixed';
+          footer.style.left = '0';
+          footer.style.right = '0';
+          footer.style.bottom = '0';
+          footer.style.width = '100%';
+          footer.style.height = '100vh';
+          footer.style.zIndex = '1';
+          footer.style.pointerEvents = 'auto';
+          footer.style.willChange = 'transform, opacity';
 
           var letters = logo.querySelectorAll('.footer-logo-letter');
 
@@ -493,23 +505,27 @@
             ticking = false;
 
             var vh = window.innerHeight || document.documentElement.clientHeight;
-            var logoRect = logo.getBoundingClientRect();
+            var triggerRect = footerTrigger.getBoundingClientRect();
 
-            /* Start when the logo enters from the bottom of the viewport. */
-            var start = vh;
-            var end = vh * 0.28;
-            var progress = clamp((start - logoRect.top) / (start - end), 0, 1);
-            var stagger = 0.42;
+            /* The animation is driven by the footer spacer moving through the viewport.
+               Unlike the fixed footer and sticky logo, this rectangle keeps changing. */
+            var progress = clamp((vh - triggerRect.top) / vh, 0, 1);
+            var easedReveal = easeOutCubic(progress);
+
+            footer.style.opacity = String(progress);
+            footer.style.transform = 'translate3d(0,' + (70 * (1 - easedReveal)) + 'px,0)';
+            footer.style.visibility = progress <= 0.001 ? 'hidden' : 'visible';
 
             if (copyWrap) {
-              var copyRect = copyWrap.getBoundingClientRect();
-              var copyProgress = clamp((vh - copyRect.top) / (vh * 0.62), 0, 1);
+              var copyProgress = clamp((progress - 0.08) / 0.72, 0, 1);
               var copyEase = easeOutCubic(copyProgress);
-              var copyY = 80 * (1 - copyEase);
+              var copyY = 90 * (1 - copyEase);
 
               copyWrap.style.transform = 'translate3d(0,' + copyY + 'px,0)';
-              copyWrap.style.opacity = String(0.25 + copyEase * 0.75);
+              copyWrap.style.opacity = String(0.2 + copyEase * 0.8);
             }
+
+            var stagger = 0.44;
 
             letters.forEach(function(letter, index) {
               var delay = letters.length > 1
@@ -518,7 +534,7 @@
 
               var letterProgress = clamp((progress - delay) / (1 - stagger), 0, 1);
               var eased = easeOutCubic(letterProgress);
-              var y = 180 * (1 - eased);
+              var y = 220 * (1 - eased);
               var colorValue = Math.round(255 * eased);
 
               letter.style.transform = 'translate3d(0,' + y + 'px,0)';
