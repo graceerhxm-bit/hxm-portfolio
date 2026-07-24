@@ -1,25 +1,43 @@
 (function () {
   function initSiteInteractions() {
 
-      /* LENIS SMOOTH SCROLL */
-      if (window.Lenis && !window.__siteLenis) {
-        var lenis = new Lenis({
-          duration: 1.2,
-          smoothWheel: true,
-          wheelMultiplier: 0.9,
-          touchMultiplier: 1,
-          infinite: false
-        });
+    /* LENIS SMOOTH SCROLL */
+    if (window.Lenis && !window.__siteLenis) {
+      var lenis = new Lenis({
+        duration: 1.35,
+        easing: function(t) {
+          return 1 - Math.pow(1 - t, 4);
+        },
+        smoothWheel: true,
+        syncTouch: true,
+        wheelMultiplier: 0.9,
+        touchMultiplier: 1,
+        infinite: false,
+        autoResize: true
+      });
 
-        window.__siteLenis = lenis;
+      window.__siteLenis = lenis;
 
-        function lenisRaf(time) {
-          lenis.raf(time);
-          requestAnimationFrame(lenisRaf);
-        }
-
+      function lenisRaf(time) {
+        lenis.raf(time);
         requestAnimationFrame(lenisRaf);
       }
+
+      requestAnimationFrame(lenisRaf);
+    }
+
+    /*
+      Scroll-driven interactions use Lenis when available so their updates
+      stay synchronized with the eased page position. Native scroll remains
+      as a safe fallback if Lenis did not load.
+    */
+    function onSmoothScroll(callback) {
+      if (window.__siteLenis && typeof window.__siteLenis.on === 'function') {
+        window.__siteLenis.on('scroll', callback);
+      } else {
+        window.addEventListener('scroll', callback, { passive: true });
+      }
+    }
 
       /* TEXT REVEAL
          Section 3 and CTA are observed separately so delays do not leak
@@ -319,25 +337,29 @@
         });
       }
 
-      /* STICKY RELEASE */
-      var stickyEl = document.querySelector('.sticky-side');
-      var triggerEl = document.querySelector('.button-style');
-      var scrollingList = document.querySelector('.scrolling-side');
+    /* STICKY RELEASE */
+    var stickyEl = document.querySelector('.sticky-side');
+    var triggerEl = document.querySelector('.button-style');
+    var scrollingList = document.querySelector('.scrolling-side');
 
-      if (stickyEl && triggerEl && scrollingList) {
-        window.addEventListener('scroll', function() {
-          var listBottom = scrollingList.getBoundingClientRect().bottom;
-          var btnBottom = triggerEl.getBoundingClientRect().bottom;
+    if (stickyEl && triggerEl && scrollingList) {
+      function updateStickyRelease() {
+        var listBottom = scrollingList.getBoundingClientRect().bottom;
+        var btnBottom = triggerEl.getBoundingClientRect().bottom;
 
-          if (listBottom <= btnBottom) {
-            stickyEl.style.position = 'relative';
-            stickyEl.style.top = 'auto';
-          } else {
-            stickyEl.style.position = 'sticky';
-            stickyEl.style.top = '15vh';
-          }
-        }, { passive: true });
+        if (listBottom <= btnBottom) {
+          stickyEl.style.position = 'relative';
+          stickyEl.style.top = 'auto';
+        } else {
+          stickyEl.style.position = 'sticky';
+          stickyEl.style.top = '15vh';
+        }
       }
+
+      onSmoothScroll(updateStickyRelease);
+      window.addEventListener('resize', updateStickyRelease);
+      updateStickyRelease();
+    }
 
       /* BUTTON HOVER FILL EFFECT */
       document.querySelectorAll('.button-style').forEach(function(btn) {
@@ -444,111 +466,111 @@
         });
       });
 
-      /* FOOTER LOGO LETTER DROP */
-      (function() {
-        function clamp(value, min, max) {
-          return Math.max(min, Math.min(max, value));
-        }
+    /* FOOTER LOGO LETTER DROP */
+    (function() {
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
 
-        function easeOutCubic(t) {
-          return 1 - Math.pow(1 - t, 3);
-        }
+      function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
 
-        function setLetterColor(letter, value) {
-          var color = 'rgb(' + value + ',' + value + ',' + value + ')';
+      function setLetterColor(letter, value) {
+        var color = 'rgb(' + value + ',' + value + ',' + value + ')';
 
-          if (letter.tagName && letter.tagName.toLowerCase() === 'g') {
-            letter.querySelectorAll('path').forEach(function(path) {
-              path.style.fill = color;
-            });
-          } else {
-            letter.style.fill = color;
-          }
-        }
-
-        function initFooterLetters() {
-          var cta = document.querySelector('.cta-section');
-          var logo = document.querySelector('.footer-logo-svg');
-          var copyWrap = document.querySelector('.footer-copy-wrap');
-
-          if (!cta || !logo) {
-            console.warn('[Footer Letters] 找不到 .cta-section 或 .footer-logo-svg');
-            return;
-          }
-
-          var letters = logo.querySelectorAll('.footer-logo-letter');
-
-          if (!letters.length) {
-            console.warn('[Footer Letters] 找不到 .footer-logo-letter');
-            return;
-          }
-
-          letters.forEach(function(letter) {
-            letter.style.transformBox = 'fill-box';
-            letter.style.transformOrigin = 'center bottom';
-            letter.style.willChange = 'transform, fill';
-            letter.style.transition = 'none';
-            letter.style.transform = 'translate3d(0,220px,0)';
-            setLetterColor(letter, 0);
+        if (letter.tagName && letter.tagName.toLowerCase() === 'g') {
+          letter.querySelectorAll('path').forEach(function(path) {
+            path.style.fill = color;
           });
+        } else {
+          letter.style.fill = color;
+        }
+      }
+
+      function initFooterLetters() {
+        var cta = document.querySelector('.cta-section');
+        var logo = document.querySelector('.footer-logo-svg');
+        var copyWrap = document.querySelector('.footer-copy-wrap');
+
+        if (!cta || !logo) {
+          console.warn('[Footer Letters] 找不到 .cta-section 或 .footer-logo-svg');
+          return;
+        }
+
+        var letters = logo.querySelectorAll('.footer-logo-letter');
+
+        if (!letters.length) {
+          console.warn('[Footer Letters] 找不到 .footer-logo-letter');
+          return;
+        }
+
+        letters.forEach(function(letter) {
+          letter.style.transformBox = 'fill-box';
+          letter.style.transformOrigin = 'center bottom';
+          letter.style.willChange = 'transform, fill';
+          letter.style.transition = 'none';
+          letter.style.transform = 'translate3d(0,220px,0)';
+          setLetterColor(letter, 0);
+        });
+
+        if (copyWrap) {
+          copyWrap.style.willChange = 'transform, opacity';
+          copyWrap.style.transition = 'none';
+          copyWrap.style.transform = 'translate3d(0,120px,0)';
+          copyWrap.style.opacity = '0.25';
+        }
+
+        var ticking = false;
+
+        function update() {
+          ticking = false;
+
+          var rect = cta.getBoundingClientRect();
+          var vh = window.innerHeight || document.documentElement.clientHeight;
+          var progress = clamp((vh - rect.bottom) / vh, 0, 1);
+          var moveDistance = Math.min(window.innerWidth * 0.12, 220);
+          var stagger = 0.42;
 
           if (copyWrap) {
-            copyWrap.style.willChange = 'transform, opacity';
-            copyWrap.style.transition = 'none';
-            copyWrap.style.transform = 'translate3d(0,120px,0)';
-            copyWrap.style.opacity = '0.25';
+            var copyDelay = 0.18;
+            var copyProgress = clamp((progress - copyDelay) / (1 - copyDelay), 0, 1);
+            var copyEase = easeOutCubic(copyProgress);
+            var copyY = 120 - 180 * copyEase;
+
+            copyWrap.style.transform = 'translate3d(0,' + copyY + 'px,0)';
+            copyWrap.style.opacity = String(0.25 + copyEase * 0.75);
           }
 
-          var ticking = false;
+          letters.forEach(function(letter, index) {
+            var delay = letters.length > 1
+              ? (index / (letters.length - 1)) * stagger
+              : 0;
 
-          function update() {
-            ticking = false;
+            var letterProgress = clamp((progress - delay) / (1 - stagger), 0, 1);
+            var eased = easeOutCubic(letterProgress);
+            var y = moveDistance * (1 - eased);
+            var colorValue = Math.round(255 * eased);
 
-            var rect = cta.getBoundingClientRect();
-            var vh = window.innerHeight || document.documentElement.clientHeight;
-            var progress = clamp((vh - rect.bottom) / vh, 0, 1);
-            var moveDistance = Math.min(window.innerWidth * 0.12, 220);
-            var stagger = 0.42;
-
-            if (copyWrap) {
-              var copyDelay = 0.18;
-              var copyProgress = clamp((progress - copyDelay) / (1 - copyDelay), 0, 1);
-              var copyEase = easeOutCubic(copyProgress);
-              var copyY = 120 - 180 * copyEase;
-
-              copyWrap.style.transform = 'translate3d(0,' + copyY + 'px,0)';
-              copyWrap.style.opacity = String(0.25 + copyEase * 0.75);
-            }
-
-            letters.forEach(function(letter, index) {
-              var delay = letters.length > 1
-                ? (index / (letters.length - 1)) * stagger
-                : 0;
-
-              var letterProgress = clamp((progress - delay) / (1 - stagger), 0, 1);
-              var eased = easeOutCubic(letterProgress);
-              var y = moveDistance * (1 - eased);
-              var colorValue = Math.round(255 * eased);
-
-              letter.style.transform = 'translate3d(0,' + y + 'px,0)';
-              setLetterColor(letter, colorValue);
-            });
-          }
-
-          function requestUpdate() {
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(update);
-          }
-
-          update();
-          window.addEventListener('scroll', requestUpdate, { passive: true });
-          window.addEventListener('resize', requestUpdate);
-          window.addEventListener('load', requestUpdate);
+            letter.style.transform = 'translate3d(0,' + y + 'px,0)';
+            setLetterColor(letter, colorValue);
+          });
         }
 
-        initFooterLetters();
-      })();
+        function requestUpdate() {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+
+        update();
+        onSmoothScroll(requestUpdate);
+        window.addEventListener('resize', requestUpdate);
+        window.addEventListener('load', requestUpdate);
+      }
+
+      initFooterLetters();
+    })();
       }
 
   if (document.readyState === 'loading') {
