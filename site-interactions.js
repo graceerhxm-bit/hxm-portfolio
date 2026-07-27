@@ -2,6 +2,49 @@
   function initSiteInteractions() {
 
     /* LENIS SMOOTH SCROLL */
+    var scrollDebug = {
+      enabled: true,
+      lastRafTime: 0,
+      lastLenisScrollTime: 0,
+      lastWheelTime: 0,
+      lastWheelDelta: 0,
+      lastScrollY: window.scrollY || 0,
+      wheelWithoutMovementCount: 0,
+      errors: []
+    };
+
+    window.__scrollDebug = scrollDebug;
+
+    function debugLog(label, data) {
+      if (!scrollDebug.enabled) return;
+      console.log('[Scroll Debug] ' + label, data || '');
+    }
+
+    window.addEventListener('error', function(event) {
+      var errorInfo = {
+        type: 'error',
+        message: event.message,
+        filename: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        time: Date.now()
+      };
+
+      scrollDebug.errors.push(errorInfo);
+      console.error('[Scroll Debug] JavaScript error', errorInfo);
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      var rejectionInfo = {
+        type: 'unhandledrejection',
+        reason: event.reason,
+        time: Date.now()
+      };
+
+      scrollDebug.errors.push(rejectionInfo);
+      console.error('[Scroll Debug] Unhandled promise rejection', rejectionInfo);
+    });
+
     if (window.Lenis && !window.__siteLenis) {
       var lenis = new Lenis({
         duration: 1.35,
@@ -18,13 +61,94 @@
 
       window.__siteLenis = lenis;
 
+      lenis.on('scroll', function(event) {
+        scrollDebug.lastLenisScrollTime = Date.now();
+        scrollDebug.lastScrollY = window.scrollY || 0;
+        scrollDebug.lastLenisEvent = event;
+      });
+
       function lenisRaf(time) {
-        lenis.raf(time);
+        scrollDebug.lastRafTime = Date.now();
+
+        try {
+          lenis.raf(time);
+        } catch (error) {
+          scrollDebug.errors.push({
+            type: 'lenis-raf',
+            message: error && error.message,
+            stack: error && error.stack,
+            time: Date.now()
+          });
+          console.error('[Scroll Debug] Lenis RAF failed', error);
+        }
+
         requestAnimationFrame(lenisRaf);
       }
 
       requestAnimationFrame(lenisRaf);
+      debugLog('Lenis initialized', lenis);
+    } else {
+      debugLog('Lenis unavailable or already initialized', {
+        hasLenisLibrary: !!window.Lenis,
+        existingInstance: !!window.__siteLenis
+      });
     }
+
+    window.addEventListener('wheel', function(event) {
+      scrollDebug.lastWheelTime = Date.now();
+      scrollDebug.lastWheelDelta = event.deltaY;
+
+      var beforeY = window.scrollY || 0;
+
+      setTimeout(function() {
+        var afterY = window.scrollY || 0;
+        var lenisInstance = window.__siteLenis;
+
+        if (Math.abs(event.deltaY) > 1 && Math.abs(afterY - beforeY) < 0.5) {
+          scrollDebug.wheelWithoutMovementCount += 1;
+
+          console.warn('[Scroll Debug] Wheel input without page movement', {
+            deltaY: event.deltaY,
+            beforeY: beforeY,
+            afterY: afterY,
+            count: scrollDebug.wheelWithoutMovementCount,
+            lenisStopped: lenisInstance ? lenisInstance.isStopped : null,
+            lenisScrolling: lenisInstance ? lenisInstance.isScrolling : null,
+            bodyOverflow: getComputedStyle(document.body).overflow,
+            htmlOverflow: getComputedStyle(document.documentElement).overflow,
+            activeElement: document.activeElement
+          });
+        } else {
+          scrollDebug.wheelWithoutMovementCount = 0;
+        }
+      }, 180);
+    }, { passive: true });
+
+    window.__reportScrollDebug = function() {
+      var lenisInstance = window.__siteLenis;
+      var report = {
+        now: Date.now(),
+        scrollY: window.scrollY || 0,
+        documentHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+        bodyOverflow: getComputedStyle(document.body).overflow,
+        htmlOverflow: getComputedStyle(document.documentElement).overflow,
+        lenisExists: !!lenisInstance,
+        lenisStopped: lenisInstance ? lenisInstance.isStopped : null,
+        lenisScrolling: lenisInstance ? lenisInstance.isScrolling : null,
+        lastRafAgo: scrollDebug.lastRafTime ? Date.now() - scrollDebug.lastRafTime : null,
+        lastLenisScrollAgo: scrollDebug.lastLenisScrollTime ? Date.now() - scrollDebug.lastLenisScrollTime : null,
+        lastWheelAgo: scrollDebug.lastWheelTime ? Date.now() - scrollDebug.lastWheelTime : null,
+        lastWheelDelta: scrollDebug.lastWheelDelta,
+        wheelWithoutMovementCount: scrollDebug.wheelWithoutMovementCount,
+        errors: scrollDebug.errors.slice(-10),
+        activeElement: document.activeElement
+      };
+
+      console.table(report);
+      console.log('[Scroll Debug] Full report', report);
+      return report;
+    };
 
     /*
       Scroll-driven interactions use Lenis when available so their updates
