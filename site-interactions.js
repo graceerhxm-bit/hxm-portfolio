@@ -1,6 +1,12 @@
 (function () {
   function initSiteInteractions() {
 
+    document.querySelectorAll('.cursor-img, .service-image').forEach(function(img) {
+      if (img instanceof HTMLImageElement && typeof img.decode === 'function') {
+        img.decode().catch(function() {});
+      }
+    });
+
     /* NATIVE SCROLL TEST
        Lenis and the temporary scroll debug code are disabled while testing
        the intermittent page-freeze issue in Safari and Chrome. */
@@ -208,7 +214,7 @@
       function showImg(img, state, x, y) {
         if (!img) return;
 
-        if (state.showTimer) clearTimeout(state.showTimer);
+        if (state.showTimer) cancelAnimationFrame(state.showTimer);
         if (state.hideTimer) clearTimeout(state.hideTimer);
 
         img.classList.remove('is-hiding', 'is-active');
@@ -216,10 +222,12 @@
         img.style.left = x + 'px';
         img.style.top = y + 'px';
 
-        state.showTimer = setTimeout(function() {
-          img.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
-          img.classList.add('is-active');
-        }, 16);
+        state.showTimer = requestAnimationFrame(function() {
+          state.showTimer = requestAnimationFrame(function() {
+            img.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+            img.classList.add('is-active');
+          });
+        });
 
         state.order = spawnOrder++;
 
@@ -262,7 +270,7 @@
 
           imgPool.forEach(function(state) {
             if (state.el) {
-              if (state.showTimer) clearTimeout(state.showTimer);
+              if (state.showTimer) cancelAnimationFrame(state.showTimer);
               if (state.hideTimer) clearTimeout(state.hideTimer);
               triggerHide(state.el, state);
             }
